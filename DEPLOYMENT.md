@@ -35,6 +35,62 @@ This repository contains a customized deployment of [Actual Budget](https://actu
    fly deploy
    ```
 
+## 🌿 Git Workflow & Branch Strategy
+
+### **Branch Purposes:**
+- **`master`** → Clean copy of upstream Actual Budget (don't modify this)
+- **`custom-flyio-deployment`** → Your working branch with all customizations
+
+### **Daily Workflow:**
+```bash
+# 1. Always start on your custom branch
+git checkout custom-flyio-deployment
+
+# 2. Make your changes (code, config, scripts)
+# Edit files, add features, modify deployment config...
+
+# 3. Test locally (optional)
+./test-local.sh
+
+# 4. Deploy to Fly.io
+fly deploy
+
+# 5. Commit your changes
+git add .
+git commit -m "Description of your changes"
+
+# 6. Push to your fork
+git push origin custom-flyio-deployment
+```
+
+### **For Actual Budget Updates (New Releases):**
+```bash
+# Option 1: Use the automated script (Recommended)
+./update-actual.sh
+
+# Option 2: Manual process
+git fetch upstream
+git checkout master
+git merge upstream/master
+git push origin master
+
+# Then merge into your custom branch
+git checkout custom-flyio-deployment
+git merge master
+git push origin custom-flyio-deployment
+```
+
+### **Repository Setup:**
+- **Upstream**: `https://github.com/actualbudget/actual.git` (original repo)
+- **Origin**: `git@github-personal:jonathangonsalves/actual.git` (your fork)
+- **Working Branch**: `custom-flyio-deployment`
+
+### **Important Notes:**
+- ✅ **Always work on** `custom-flyio-deployment` branch
+- ✅ **Never modify** the `master` branch directly
+- ✅ **Use your update scripts** for upstream updates
+- ✅ **Don't use GitHub's "Sync Fork" button** - use local Git commands for better control
+
 ## 📦 Update Management
 
 ### Available Scripts
