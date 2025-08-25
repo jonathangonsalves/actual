@@ -27,6 +27,7 @@ import { Menu } from '@actual-app/components/menu';
 import { Popover } from '@actual-app/components/popover';
 import { Stack } from '@actual-app/components/stack';
 import { styles } from '@actual-app/components/styles';
+import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { Tooltip } from '@actual-app/components/tooltip';
 import { View } from '@actual-app/components/view';
@@ -349,6 +350,44 @@ export function AccountHeader({
           <View style={{ flexShrink: 0 }}>
             {/* @ts-expect-error fix me */}
             <FilterButton onApply={onApplyFilter} />
+          </View>
+          <View style={{ flexShrink: 0, marginLeft: 5 }}>
+            <Button
+              variant="bare"
+              onPress={() => {
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                
+                // Format dates as YYYY-MM-DD (ISO format)
+                const formatDate = (date: Date) => {
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                };
+                
+                onApplyFilter({
+                  customName: 'Current Month',
+                  queryFilter: {
+                    date: {
+                      $gte: formatDate(startOfMonth),
+                      $lte: formatDate(endOfMonth),
+                    },
+                  },
+                });
+              }}
+              style={{
+                backgroundColor: theme.buttonNormalBackground,
+                borderRadius: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme.buttonNormalText }}>
+                Current Month
+              </Text>
+            </Button>
           </View>
           <View style={{ flex: 1 }} />
           <Search
