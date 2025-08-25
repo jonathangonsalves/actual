@@ -117,6 +117,12 @@ export function MobileNavTabs() {
       Icon: SvgReports,
     },
     {
+      name: t('Goals'),
+      path: '/goals',
+      style: navTabStyle,
+      Icon: SvgCog,
+    },
+    {
       name: t('Schedules (Soon)'),
       path: '/schedules/soon',
       style: navTabStyle,

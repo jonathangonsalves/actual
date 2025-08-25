@@ -27,6 +27,7 @@ import { useMultiuserEnabled } from './ServerContext';
 import { Settings } from './settings';
 import { FloatableSidebar } from './sidebar';
 import { ManageTagsPage } from './tags/ManageTagsPage';
+import { GoalsPage } from './goals/GoalsPage';
 import { Titlebar } from './Titlebar';
 
 import { sync } from '@desktop-client/app/appSlice';
@@ -239,6 +240,7 @@ export function FinancesApp() {
                 />
 
                 <Route path="/reports/*" element={<Reports />} />
+                <Route path="/goals" element={<GoalsPage />} />
 
                 <Route
                   path="/budget"
@@ -330,6 +332,7 @@ export function FinancesApp() {
             <Routes>
               <Route path="/budget" element={<MobileNavTabs />} />
               <Route path="/accounts" element={<MobileNavTabs />} />
+              <Route path="/goals" element={<MobileNavTabs />} />
               <Route path="/settings" element={<MobileNavTabs />} />
               <Route path="/reports" element={<MobileNavTabs />} />
               <Route path="/rules" element={<MobileNavTabs />} />
