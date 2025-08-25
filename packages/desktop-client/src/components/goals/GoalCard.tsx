@@ -21,9 +21,10 @@ interface Goal {
 interface GoalCardProps {
   goal: Goal;
   onDelete: () => void;
+  onClick?: () => void;
 }
 
-export function GoalCard({ goal, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onDelete, onClick }: GoalCardProps) {
   const [showActions, setShowActions] = useState(false);
   
   const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0;
@@ -60,6 +61,7 @@ export function GoalCard({ goal, onDelete }: GoalCardProps) {
       }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
+      onClick={onClick}
     >
       {/* Header */}
       <View
@@ -197,8 +199,30 @@ export function GoalCard({ goal, onDelete }: GoalCardProps) {
           justifyContent: 'space-between',
           paddingTop: 15,
           borderTop: `1px solid ${theme.tableBorder}`,
+          gap: 20,
         }}
       >
+        <View>
+          <Text
+            style={{
+              fontSize: 12,
+              color: theme.pageTextSubdued,
+              marginBottom: 2,
+            }}
+          >
+            Achieved
+          </Text>
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: theme.pageTextDark,
+            }}
+          >
+            {formatCurrency(goal.current_amount)}
+          </Text>
+        </View>
+
         <View>
           <Text
             style={{

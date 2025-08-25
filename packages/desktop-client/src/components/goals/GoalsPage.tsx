@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
@@ -10,72 +11,103 @@ import { Stack } from '@actual-app/components/stack';
 import { GoalCard } from './GoalCard';
 import { CreateGoalModal } from './CreateGoalModal';
 
-// Mock data for development
-const mockGoals = [
-  {
-    id: '1',
-    name: 'New Car',
-    description: 'Save for a reliable family car',
-    target_amount: 2500000, // $25,000 in cents
-    current_amount: 750000, // $7,500 in cents
-    target_date: '2025-12-31',
-    tag_pattern: 'goal_car',
-    color: '#3b82f6',
-    created_at: '2024-01-01',
-    updated_at: '2024-08-25',
-  },
-  {
-    id: '2',
-    name: 'Emergency Fund',
-    description: '6 months of expenses',
-    target_amount: 1800000, // $18,000 in cents
-    current_amount: 1200000, // $12,000 in cents
-    target_date: '2025-06-30',
-    tag_pattern: 'goal_emergency',
-    color: '#10b981',
-    created_at: '2024-01-01',
-    updated_at: '2024-08-25',
-  },
-  {
-    id: '3',
-    name: 'Vacation Fund',
-    description: 'Trip to Europe next summer',
-    target_amount: 500000, // $5,000 in cents
-    current_amount: 150000, // $1,500 in cents
-    target_date: '2025-07-01',
-    tag_pattern: 'goal_vacation',
-    color: '#f59e0b',
-    created_at: '2024-02-01',
-    updated_at: '2024-08-25',
-  },
-];
+import { send } from 'loot-core/platform/client/fetch';
+
+interface Goal {
+  id: string;
+  name: string;
+  description?: string;
+  target_amount: number;
+  current_amount: number;
+  target_date?: string;
+  tag_pattern: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export function GoalsPage() {
   const { t } = useTranslation();
-  const [goals, setGoals] = useState(mockGoals);
+  const navigate = useNavigate();
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleCreateGoal = (goalData: any) => {
-    // TODO: Connect to backend API
-    const newGoal = {
-      id: Date.now().toString(),
-      ...goalData,
-      current_amount: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setGoals([...goals, newGoal]);
-    setIsCreateModalOpen(false);
+  // Load goals from backend
+  const loadGoals = async () => {
+    try {
+      setIsLoading(true);
+      // First recalculate progress to ensure it's up to date
+      await send('goals-recalculate');
+      // Then load the updated goals
+      const goalsData = await send('goals-get');
+      setGoals(goalsData || []);
+    } catch (error) {
+      console.error('Failed to load goals:', error);
+      setGoals([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteGoal = (goalId: string) => {
-    // TODO: Connect to backend API
-    setGoals(goals.filter(goal => goal.id !== goalId));
+  useEffect(() => {
+    loadGoals();
+  }, []);
+
+  const handleCreateGoal = async (goalData: any) => {
+    try {
+      await send('goals-create', { goal: goalData });
+      await loadGoals(); // Reload goals to get updated data
+      setIsCreateModalOpen(false);
+    } catch (error) {
+      console.error('Failed to create goal:', error);
+      // TODO: Show error message to user
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      await send('goals-delete', { id: goalId });
+      await loadGoals(); // Reload goals to get updated data
+    } catch (error) {
+      console.error('Failed to delete goal:', error);
+      // TODO: Show error message to user
+    }
+  };
+
+  const handleGoalClick = (goal: Goal) => {
+    // Navigate to goal details page
+    navigate(`/goals/${goal.id}`);
+  };
+
+  const handleRefreshProgress = async () => {
+    try {
+      await send('goals-recalculate');
+      await loadGoals(); // Reload goals to get updated progress
+    } catch (error) {
+      console.error('Failed to refresh progress:', error);
+    }
   };
 
   const totalTargetAmount = goals.reduce((sum, goal) => sum + goal.target_amount, 0);
   const totalCurrentAmount = goals.reduce((sum, goal) => sum + goal.current_amount, 0);
   const overallProgress = totalTargetAmount > 0 ? (totalCurrentAmount / totalTargetAmount) * 100 : 0;
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          padding: 20,
+          backgroundColor: theme.pageBackground,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: theme.pageTextSubdued }}>Loading goals...</Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -115,19 +147,37 @@ export function GoalsPage() {
           </Text>
         </View>
         
-        <Button
-          variant="primary"
-          onPress={() => setIsCreateModalOpen(true)}
-          style={{
-            backgroundColor: theme.buttonPrimaryBackground,
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-          }}
-        >
-          <Text style={{ color: theme.buttonPrimaryText, fontWeight: '600' }}>
-            + New Goal
-          </Text>
-        </Button>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          <Button
+            variant="bare"
+            onPress={handleRefreshProgress}
+            style={{
+              backgroundColor: theme.pageBackgroundModalNormal,
+              paddingHorizontal: 8,
+              paddingVertical: 8,
+              borderRadius: 6,
+              minWidth: 'auto',
+            }}
+          >
+            <Text style={{ color: theme.pageTextSubdued, fontSize: 16 }}>
+              🔄
+            </Text>
+          </Button>
+          
+          <Button
+            variant="primary"
+            onPress={() => setIsCreateModalOpen(true)}
+            style={{
+              backgroundColor: theme.buttonPrimaryBackground,
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+            }}
+          >
+            <Text style={{ color: theme.buttonPrimaryText, fontWeight: '600' }}>
+              + New Goal
+            </Text>
+          </Button>
+        </View>
       </View>
 
       {/* Overall Progress Summary */}
@@ -248,6 +298,7 @@ export function GoalsPage() {
               key={goal.id}
               goal={goal}
               onDelete={() => handleDeleteGoal(goal.id)}
+              onClick={() => handleGoalClick(goal)}
             />
           ))}
         </View>

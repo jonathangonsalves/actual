@@ -28,6 +28,7 @@ import { Settings } from './settings';
 import { FloatableSidebar } from './sidebar';
 import { ManageTagsPage } from './tags/ManageTagsPage';
 import { GoalsPage } from './goals/GoalsPage';
+import { GoalDetailsPage } from './goals/GoalDetailsPage';
 import { Titlebar } from './Titlebar';
 
 import { sync } from '@desktop-client/app/appSlice';
@@ -241,6 +242,7 @@ export function FinancesApp() {
 
                 <Route path="/reports/*" element={<Reports />} />
                 <Route path="/goals" element={<GoalsPage />} />
+                <Route path="/goals/:goalId" element={<GoalDetailsPage />} />
 
                 <Route
                   path="/budget"
