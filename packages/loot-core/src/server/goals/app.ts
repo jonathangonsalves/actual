@@ -172,18 +172,24 @@ async function calculateGoalProgress(goalId: string): Promise<number> {
   const goal = await getGoal(goalId);
   if (!goal) return 0;
 
-  // Get all transactions that have notes containing the goal's tag pattern
-  // Tags are stored in the notes field with # prefix (e.g., "#goal_car")
+  // Get all transactions that have the goal tag in notes OR imported_description
+  // This includes transfers that might have the tag in imported_description
   const transactions = await db.runQuery(
     `SELECT amount 
      FROM transactions 
-     WHERE notes LIKE ? AND tombstone = 0`,
-    [`%#${goal.tag_pattern}%`],
+     WHERE (notes LIKE ? OR imported_description LIKE ?) 
+     AND tombstone = 0`,
+    [`%#${goal.tag_pattern}%`, `%#${goal.tag_pattern}%`],
     true
   );
 
-  const totalAmount = transactions.reduce((sum: number, tx: any) => sum + tx.amount, 0);
-  
+  // Sum only POSITIVE amounts (contributions TO the goal)
+  // Negative amounts are outflows (like the source side of transfers) and shouldn't count
+  const totalAmount = transactions.reduce((sum: number, tx: any) => {
+    const amount = tx.amount || 0;
+    return sum + (amount > 0 ? amount : 0);
+  }, 0);
+
   // Update the goal's current amount
   await db.runQuery(
     'UPDATE goals SET current_amount = ?, updated_at = ? WHERE id = ?',
@@ -196,36 +202,43 @@ async function calculateGoalProgress(goalId: string): Promise<number> {
 // Get transactions for a specific goal
 async function getGoalTransactions({ goalId, tagPattern }: { goalId?: string; tagPattern: string }) {
   try {
-    // Use only the columns we know work
+    // Get all transactions with account information using correct column name 'acct'
     const transactions = await db.runQuery(
       `SELECT 
-        id,
-        date,
-        amount,
-        notes,
-        imported_description
-       FROM transactions 
-       WHERE notes LIKE ? AND tombstone = 0
-       ORDER BY date DESC`,
-      [`%#${tagPattern}%`],
+        t.id,
+        t.date,
+        t.amount,
+        t.notes,
+        t.imported_description,
+        t.acct as account_id,
+        a.name as account_name
+       FROM transactions t
+       LEFT JOIN accounts a ON t.acct = a.id
+       WHERE (t.notes LIKE ? OR t.imported_description LIKE ?) 
+       AND t.tombstone = 0
+       ORDER BY t.date DESC`,
+      [`%#${tagPattern}%`, `%#${tagPattern}%`],
       true
     );
 
     return transactions.map((tx: any) => {
       const notes = tx.notes || '';
+      const description = tx.imported_description || '';
       
       // Extract the description part (everything before the tag or the whole thing if no tag)
       const goalTag = `#${tagPattern}`;
-      let description = notes;
+      let displayDescription = notes || description;
       
       // If the notes contain the tag, try to extract the description part
       if (notes.includes(goalTag)) {
-        // Split by the tag and take the first part, then trim
-        description = notes.split(goalTag)[0].trim();
-        
-        // If nothing before the tag, use the whole notes
-        if (!description) {
-          description = notes;
+        displayDescription = notes.split(goalTag)[0].trim();
+        if (!displayDescription) {
+          displayDescription = notes;
+        }
+      } else if (description.includes(goalTag)) {
+        displayDescription = description.split(goalTag)[0].trim();
+        if (!displayDescription) {
+          displayDescription = description;
         }
       }
       
@@ -233,7 +246,8 @@ async function getGoalTransactions({ goalId, tagPattern }: { goalId?: string; ta
         id: tx.id,
         date: tx.date,
         amount: tx.amount,
-        notes: notes, // Keep full notes for display
+        notes: notes || description, // Keep full notes for display
+        account: tx.account_name || 'Unknown Account',
       };
     });
   } catch (error) {

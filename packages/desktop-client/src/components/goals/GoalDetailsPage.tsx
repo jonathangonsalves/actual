@@ -371,7 +371,7 @@ export function GoalDetailsPage() {
                       color: theme.pageTextSubdued,
                     }}
                   >
-                    {formatDate(transaction.date)}
+                    {formatDate(transaction.date)} • {transaction.account}
                   </Text>
                 </View>
                 <Text
